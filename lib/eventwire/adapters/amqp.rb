@@ -8,8 +8,8 @@ class Eventwire::Adapters::AMQP
 
   def publish(event_name, event_data = nil)
     connect_synch do |mq|
-      mq.exchange(event_name.to_s, :type => :fanout).publish(event_data)
-    end    
+      mq.exchange(event_name.to_s, :type => :fanout, durable: true).publish(event_data, durable: true)
+    end
   end
 
   def subscribe(event_name, handler_id, &handler)
@@ -29,7 +29,7 @@ class Eventwire::Adapters::AMQP
   def stop
     AMQP.stop { EM.stop }
   end
-  
+
   def purge
     connect_synch do |mq|
       subscriptions.group_by(&:first).each do |event_name, _|
@@ -44,13 +44,13 @@ class Eventwire::Adapters::AMQP
   def subscriptions
     @subscriptions ||= []
   end
-  
-  def bind_subscription(event_name, handler_id, handler)   
-    (@channel ||= AMQP::Channel.new).tap do |ch|
-      fanout = ch.fanout(event_name.to_s)
-      queue  = ch.queue(handler_id.to_s)
 
-      queue.bind(fanout).subscribe do |json_data|
+  def bind_subscription(event_name, handler_id, handler)
+    (@channel ||= AMQP::Channel.new).tap do |ch|
+      fanout = ch.fanout(event_name.to_s, durable: true)
+      queue  = ch.queue(handler_id.to_s, durable: true)
+
+      queue.bind(fanout).subscribe(ack: true) do |json_data|
         handler.call json_data
       end
     end
@@ -63,5 +63,5 @@ class Eventwire::Adapters::AMQP
   def connect_synch(&block)
     Bunny.run(@options, &block)
   end
-  
+
 end
