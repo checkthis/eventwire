@@ -8,7 +8,7 @@ class Eventwire::Adapters::AMQP
 
   def publish(event_name, event_data = nil)
     connect_synch do |mq|
-      mq.exchange(event_name.to_s, :type => :fanout, durable: true).publish(event_data, durable: true)
+      mq.exchange(event_name.to_s, :type => :fanout, :durable => true).publish(event_data, :durable => true)
     end
   end
 
@@ -47,10 +47,10 @@ class Eventwire::Adapters::AMQP
 
   def bind_subscription(event_name, handler_id, handler)
     (@channel ||= AMQP::Channel.new).tap do |ch|
-      fanout = ch.fanout(event_name.to_s, durable: true)
-      queue  = ch.queue(handler_id.to_s, durable: true)
+      fanout = ch.fanout(event_name.to_s, :durable => true)
+      queue  = ch.queue(handler_id.to_s, :durable => true)
 
-      queue.bind(fanout).subscribe(ack: true) do |json_data|
+      queue.bind(fanout).subscribe(:ack => true) do |json_data|
         handler.call json_data
       end
     end
