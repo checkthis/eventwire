@@ -50,7 +50,8 @@ class Eventwire::Adapters::AMQP
       fanout = ch.fanout(event_name.to_s, :durable => true)
       queue  = ch.queue(handler_id.to_s, :durable => true)
 
-      queue.bind(fanout).subscribe(:ack => true) do |json_data|
+      queue.bind(fanout).subscribe(:ack => true) do |headers, json_data|
+        headers.ack
         handler.call json_data
       end
     end
