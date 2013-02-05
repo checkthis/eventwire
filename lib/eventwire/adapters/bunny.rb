@@ -1,7 +1,7 @@
 require 'bunny'
 
 class Eventwire::Adapters::Bunny
-  
+
   def initialize(options = {})
     @options = options
   end
@@ -23,13 +23,13 @@ class Eventwire::Adapters::Bunny
 
   def start
     connect do |channel|
-      queue = channel.queue(queue_name)
-      
-      subscriptions.each do |event_name, handlers| 
+      queue = channel.queue(queue_name, :arguments => { "x-ha-policy" => "all" })
+
+      subscriptions.each do |event_name, handlers|
         fanout = channel.exchange(event_name.to_s, :type => :fanout)
         queue.bind(fanout)
       end
-      
+
       queue.subscribe do |msg|
         event_name = msg[:delivery_details][:exchange]
         event_data = msg[:payload]
@@ -43,7 +43,7 @@ class Eventwire::Adapters::Bunny
   def stop
     # TODO: Find a graceful way to stop Bunny's subscribe loop
   end
-  
+
   def purge
     connect do |channel|
       subscriptions.each do |event_name, _|
@@ -52,15 +52,15 @@ class Eventwire::Adapters::Bunny
       channel.queue(queue_name).delete
     end
   end
-  
+
   def subscriptions
     @subscriptions ||= {}
   end
-  
+
   def handler_ids
     @handler_ids ||= []
   end
-  
+
   def queue_name
     Digest::MD5.hexdigest(handler_ids.join(':'))
   end
@@ -68,5 +68,5 @@ class Eventwire::Adapters::Bunny
   def connect(&block)
     Bunny.run(@options, &block)
   end
-  
+
 end

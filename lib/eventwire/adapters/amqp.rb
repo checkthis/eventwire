@@ -48,7 +48,7 @@ class Eventwire::Adapters::AMQP
   def bind_subscription(event_name, handler_id, handler)
     (@channel ||= AMQP::Channel.new).tap do |ch|
       fanout = ch.fanout(event_name.to_s, :durable => true)
-      queue  = ch.queue(handler_id.to_s, :durable => true)
+      queue  = ch.queue(handler_id.to_s, :durable => true, :arguments => { "x-ha-policy" => "all" })
 
       queue.bind(fanout).subscribe(:ack => true) do |headers, json_data|
         headers.ack
